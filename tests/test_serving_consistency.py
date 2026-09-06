@@ -7,6 +7,10 @@ what training reported. If these numbers diverge, it means serving is
 computing features differently than training did -- the exact
 training-serving skew bug we've been careful to avoid.
 """
+
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import pandas as pd
 import xgboost as xgb
 from src.serving.feature_builder import build_features_for_timestamp

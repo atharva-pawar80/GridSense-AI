@@ -16,6 +16,7 @@ import pandas as pd
 import mlflow
 import mlflow.xgboost
 from xgboost import XGBRegressor
+mlflow.set_tracking_uri("sqlite:///mlflow.db")
 
 FEATURE_COLS = [
     "hour_sin", "hour_cos", "dow_sin", "dow_cos", "month_sin", "month_cos",
