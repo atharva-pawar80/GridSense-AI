@@ -20,7 +20,7 @@ def build_features_for_timestamp(history: pd.DataFrame, target_timestamp: pd.Tim
     if len(window) < 24:
         raise ValueError("Not enough history to compute the 24-hour rolling average")
     rolling_avg_24h = window["AEP_MW"].mean()
-
+    
     # calendar features -- computable directly from the timestamp, no history needed
     hour = target_timestamp.hour
     dow = target_timestamp.dayofweek

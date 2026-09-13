@@ -16,10 +16,16 @@ import pandas as pd
 import xgboost as xgb
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-
+from fastapi.middleware.cors import CORSMiddleware
 from src.serving.feature_builder import build_features_for_timestamp
 
 app = FastAPI(title="GridSense AI — Day-Ahead Load Forecast")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # only trust our dashboard's address
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 FEATURE_COLS = [
     "hour_sin", "hour_cos", "dow_sin", "dow_cos", "month_sin", "month_cos",
