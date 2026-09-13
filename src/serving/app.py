@@ -90,7 +90,7 @@ def predict_day(date: str):
         X = pd.DataFrame([features])[FEATURE_COLS]
         pred = _model.predict(X)[0]
         results.append({
-            "hour": target_timestamp.strftime("%-I%p").lower(),
+            "hour": f"{target_timestamp.hour % 12 or 12}{'am' if target_timestamp.hour < 12 else 'pm'}",
             "timestamp": str(target_timestamp),
             "predicted": float(pred),
         })
