@@ -74,3 +74,24 @@ def load_model_and_history():
     _model = xgb.XGBRegressor()
     _model.load_model("models/gridsense_baseline.json")
     _history = pd.read_csv("data/raw/AEP_hourly.csv", parse_dates=["Datetime"])
+
+
+@app.get("/predict/day")
+def predict_day(date: str):
+    """Returns predictions for all 24 hours of the given date, e.g. ?date=2018-06-15"""
+    base = pd.Timestamp(date)
+    results = []
+    for hour in range(24):
+        target_timestamp = base + pd.Timedelta(hours=hour)
+        try:
+            features = build_features_for_timestamp(_history, target_timestamp)
+        except ValueError:
+            continue  # not enough history for this hour, skip it
+        X = pd.DataFrame([features])[FEATURE_COLS]
+        pred = _model.predict(X)[0]
+        results.append({
+            "hour": target_timestamp.strftime("%-I%p").lower(),
+            "timestamp": str(target_timestamp),
+            "predicted": float(pred),
+        })
+    return {"date": date, "predictions": results}
