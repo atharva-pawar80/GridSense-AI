@@ -13,3 +13,4 @@ data/processed/*.csv
 _tmp_datasource/
 .env
 .DS_Store
+dashboard/node_modules/
