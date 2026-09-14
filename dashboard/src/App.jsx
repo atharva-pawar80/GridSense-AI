@@ -3,7 +3,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar, Cell,
 } from "recharts";
-import { Zap, TrendingUp, AlertTriangle, Activity } from "lucide-react";
+import { Zap, TrendingUp, AlertTriangle, Activity, Calendar } from "lucide-react";
 
 const COLORS = {
   void: "#0A0E17",
@@ -93,13 +93,19 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function App() {
+  const [selectedDate, setSelectedDate] = useState("2018-06-15");
   const [hourlyForecast, setHourlyForecast] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/predict/day?date=2018-06-15")
-      .then((res) => res.json())
+    setLoading(true);
+    setError(null);
+    fetch(`http://127.0.0.1:8000/predict/day?date=${selectedDate}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
         const formatted = data.predictions.map((p) => ({
           hour: p.hour,
@@ -113,14 +119,13 @@ export default function App() {
         setError(err.message);
         setLoading(false);
       });
-  }, []);
+  }, [selectedDate]);
 
   const improvementPct = (
     (1 - naiveVsModel[1].value / naiveVsModel[0].value) *
     100
   ).toFixed(1);
 
-  // Guard: don't try to compute a peak until real data has actually arrived
   const peakHour =
     hourlyForecast.length > 0
       ? hourlyForecast.reduce((a, b) => (b.predicted > a.predicted ? b : a))
@@ -143,8 +148,7 @@ export default function App() {
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
       `}</style>
 
-      {/* Top bar */}
-      <div className="flex items-center justify-between" style={{ marginBottom: 28 }}>
+      <div className="flex items-center justify-between" style={{ marginBottom: 20 }}>
         <div className="flex items-center gap-3">
           <Zap size={20} color={COLORS.cyan} strokeWidth={2.2} />
           <span style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 600 }}>
@@ -166,28 +170,54 @@ export default function App() {
             }}
           />
           <span style={{ color: COLORS.textMuted, fontSize: 13 }}>
-            {loading ? "Connecting to API..." : error ? "API connection failed" : "Live · connected to GridSense API"}
+            {loading ? "Loading..." : error ? "API connection failed" : "Live · connected to GridSense API"}
           </span>
         </div>
       </div>
+
+      <Panel style={{ padding: "14px 22px", marginBottom: 16 }}>
+        <div className="flex items-center gap-3">
+          <Calendar size={15} color={COLORS.cyan} />
+          <Label>Forecast date</Label>
+          <input
+            type="date"
+            value={selectedDate}
+            min="2004-10-08"
+            max="2018-08-02"
+            onChange={(e) => setSelectedDate(e.target.value)}
+            style={{
+              background: COLORS.void,
+              border: `1px solid ${COLORS.hairline}`,
+              borderRadius: 4,
+              padding: "6px 10px",
+              color: COLORS.textPrimary,
+              fontFamily: FONT_MONO,
+              fontSize: 13,
+            }}
+          />
+          <span style={{ fontSize: 12, color: COLORS.textFaint }}>
+            (real data covers Oct 2004 – Aug 2018)
+          </span>
+        </div>
+      </Panel>
 
       {error && (
         <Panel style={{ padding: "14px 22px", marginBottom: 16, borderColor: "rgba(245,166,35,0.4)" }}>
           <div className="flex items-center gap-2">
             <AlertTriangle size={14} color={COLORS.amber} />
             <span style={{ fontSize: 13, color: COLORS.textMuted }}>
-              Could not reach the API at localhost:8000 — {error}. Make sure the
-              FastAPI server is running.
+              Could not load predictions for {selectedDate} — {error}. Make
+              sure the FastAPI server is running and the date is inside the
+              real data range.
             </span>
           </div>
         </Panel>
       )}
 
-      {/* Hero row: big predicted number + accuracy panel */}
       <div className="grid grid-cols-3 gap-4" style={{ marginBottom: 16 }}>
         <Panel glow className="col-span-2" style={{ padding: "26px 30px" }}>
           <Label>
-            {peakHour ? `Predicted peak load — ${peakHour.hour}` : "Predicted peak load"}
+            {peakHour ? `Predicted peak load — ${selectedDate}, ${peakHour.hour}` : "Predicted peak load"}
           </Label>
           <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 10 }}>
             <span
@@ -247,12 +277,11 @@ export default function App() {
         </Panel>
       </div>
 
-      {/* 24h forecast curve */}
       <Panel style={{ padding: "22px 26px 12px" }} className="mb-4">
         <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
           <div className="flex items-center gap-2">
             <Activity size={15} color={COLORS.cyan} />
-            <Label>24-hour load forecast</Label>
+            <Label>24-hour load forecast — {selectedDate}</Label>
           </div>
           <div className="flex items-center gap-4" style={{ fontSize: 12, color: COLORS.textMuted }}>
             <span className="flex items-center gap-1.5">
@@ -305,7 +334,6 @@ export default function App() {
         )}
       </Panel>
 
-      {/* Bottom row: naive vs model, feature importance */}
       <div className="grid grid-cols-2 gap-4">
         <Panel style={{ padding: "22px 26px" }}>
           <Label>Naive guess vs. GridSense AI (avg. error)</Label>
@@ -332,7 +360,7 @@ export default function App() {
 
         <Panel style={{ padding: "22px 26px" }}>
           <div className="flex items-center gap-2">
-            <Label>What drives tomorrow's forecast</Label>
+            <Label>What drives every forecast</Label>
           </div>
           <div style={{ marginTop: 14 }}>
             {featureImportance.map((f, i) => (
@@ -359,7 +387,6 @@ export default function App() {
         </Panel>
       </div>
 
-      {/* Footer note: known limitation, stated honestly */}
       <Panel style={{ padding: "14px 22px", marginTop: 16 }}>
         <div className="flex items-center gap-2">
           <AlertTriangle size={14} color={COLORS.amber} />
