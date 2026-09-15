@@ -3,19 +3,19 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar, Cell,
 } from "recharts";
-import { Zap, TrendingUp, AlertTriangle, Activity, Calendar } from "lucide-react";
+import { Zap, TrendingUp, AlertTriangle, Activity, Calendar, Compass } from "lucide-react";
 
 const COLORS = {
-  void: "#0A0E17",
-  panel: "#10151F",
-  panelBorder: "rgba(34, 211, 238, 0.15)",
+  void: "#080B12",
+  panel: "#0F141E",
+  panelBorder: "rgba(34, 211, 238, 0.18)",
   hairline: "rgba(255,255,255,0.08)",
   cyan: "#22D3EE",
-  cyanDim: "rgba(34, 211, 238, 0.15)",
+  cyanDim: "rgba(34, 211, 238, 0.16)",
   amber: "#F5A623",
   violet: "#7C6CF6",
-  textPrimary: "#E6EDF3",
-  textMuted: "#6B7785",
+  textPrimary: "#EDF2F7",
+  textMuted: "#7C8798",
   textFaint: "#3E4756",
 };
 
@@ -36,15 +36,14 @@ const naiveVsModel = [
   { name: "GridSense AI", value: 569.8 },
 ];
 
-function Panel({ children, glow, style, className = "" }) {
+function Panel({ children, glow, style }) {
   return (
     <div
-      className={`relative ${className}`}
       style={{
         background: COLORS.panel,
         border: `1px solid ${glow ? COLORS.panelBorder : COLORS.hairline}`,
-        borderRadius: 4,
-        boxShadow: glow ? `0 0 40px -12px ${COLORS.cyanDim}` : "none",
+        borderRadius: 6,
+        boxShadow: glow ? `0 0 48px -14px ${COLORS.cyanDim}` : "none",
         ...style,
       }}
     >
@@ -55,14 +54,15 @@ function Panel({ children, glow, style, className = "" }) {
 
 function Label({ children }) {
   return (
-    <div
-      style={{
-        fontFamily: FONT_SANS,
-        fontSize: 12,
-        letterSpacing: "0.02em",
-        color: COLORS.textMuted,
-      }}
-    >
+    <div style={{ fontFamily: FONT_SANS, fontSize: 12.5, letterSpacing: "0.03em", color: COLORS.textMuted }}>
+      {children}
+    </div>
+  );
+}
+
+function Row({ children, style, gap = 10 }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap, ...style }}>
       {children}
     </div>
   );
@@ -110,6 +110,8 @@ export default function App() {
         const formatted = data.predictions.map((p) => ({
           hour: p.hour,
           predicted: Math.round(p.predicted),
+          lag_24h: p.lag_24h ? Math.round(p.lag_24h) : null,
+          lag_168h: p.lag_168h ? Math.round(p.lag_168h) : null,
         }));
         setHourlyForecast(formatted);
         setLoading(false);
@@ -121,10 +123,7 @@ export default function App() {
       });
   }, [selectedDate]);
 
-  const improvementPct = (
-    (1 - naiveVsModel[1].value / naiveVsModel[0].value) *
-    100
-  ).toFixed(1);
+  const improvementPct = ((1 - naiveVsModel[1].value / naiveVsModel[0].value) * 100).toFixed(1);
 
   const peakHour =
     hourlyForecast.length > 0
@@ -138,264 +137,290 @@ export default function App() {
         minHeight: "100vh",
         fontFamily: FONT_SANS,
         color: COLORS.textPrimary,
-        padding: "28px 32px",
-        backgroundImage:
-          "linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)",
-        backgroundSize: "34px 34px",
+        padding: "36px 40px",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+        @keyframes scanline {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(100vh); }
+        }
+        @keyframes pulseDot {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(34,211,238,0.55); }
+          70% { box-shadow: 0 0 0 10px rgba(34,211,238,0); }
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+          filter: invert(70%) sepia(60%) saturate(1000%) hue-rotate(150deg);
+          cursor: pointer;
+          transform: scale(1.3);
+        }
       `}</style>
 
-      <div className="flex items-center justify-between" style={{ marginBottom: 20 }}>
-        <div className="flex items-center gap-3">
-          <Zap size={20} color={COLORS.cyan} strokeWidth={2.2} />
-          <span style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 600 }}>
-            GridSense AI
-          </span>
-          <span style={{ color: COLORS.textFaint, fontSize: 14 }}>·</span>
-          <span style={{ color: COLORS.textMuted, fontSize: 14 }}>
-            AEP, Ohio Valley region
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: 99,
-              background: loading ? COLORS.textFaint : COLORS.cyan,
-              boxShadow: loading ? "none" : `0 0 8px 2px ${COLORS.cyanDim}`,
-            }}
-          />
-          <span style={{ color: COLORS.textMuted, fontSize: 13 }}>
-            {loading ? "Loading..." : error ? "API connection failed" : "Live · connected to GridSense API"}
-          </span>
-        </div>
-      </div>
+      {/* Static grid background */}
+      <div
+        style={{
+          position: "absolute", inset: 0, pointerEvents: "none",
+          backgroundImage:
+            "linear-gradient(rgba(34,211,238,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,0.035) 1px, transparent 1px)",
+          backgroundSize: "38px 38px",
+        }}
+      />
+      {/* Slow animated scan line, like a radar sweep */}
+      <div
+        style={{
+          position: "absolute", left: 0, right: 0, height: "35vh",
+          background: `linear-gradient(180deg, transparent, ${COLORS.cyanDim}, transparent)`,
+          animation: "scanline 9s linear infinite",
+          pointerEvents: "none",
+        }}
+      />
 
-      <Panel style={{ padding: "14px 22px", marginBottom: 16 }}>
-        <div className="flex items-center gap-3">
-          <Calendar size={15} color={COLORS.cyan} />
-          <Label>Forecast date</Label>
-          <input
-            type="date"
-            value={selectedDate}
-            min="2004-10-08"
-            max="2018-08-02"
-            onChange={(e) => setSelectedDate(e.target.value)}
-            style={{
-              background: COLORS.void,
-              border: `1px solid ${COLORS.hairline}`,
-              borderRadius: 4,
-              padding: "6px 10px",
-              color: COLORS.textPrimary,
-              fontFamily: FONT_MONO,
-              fontSize: 13,
-            }}
-          />
-          <span style={{ fontSize: 12, color: COLORS.textFaint }}>
-            (real data covers Oct 2004 – Aug 2018)
-          </span>
-        </div>
-      </Panel>
-
-      {error && (
-        <Panel style={{ padding: "14px 22px", marginBottom: 16, borderColor: "rgba(245,166,35,0.4)" }}>
-          <div className="flex items-center gap-2">
-            <AlertTriangle size={14} color={COLORS.amber} />
-            <span style={{ fontSize: 13, color: COLORS.textMuted }}>
-              Could not load predictions for {selectedDate} — {error}. Make
-              sure the FastAPI server is running and the date is inside the
-              real data range.
-            </span>
-          </div>
-        </Panel>
-      )}
-
-      <div className="grid grid-cols-3 gap-4" style={{ marginBottom: 16 }}>
-        <Panel glow className="col-span-2" style={{ padding: "26px 30px" }}>
-          <Label>
-            {peakHour ? `Predicted peak load — ${selectedDate}, ${peakHour.hour}` : "Predicted peak load"}
-          </Label>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 10 }}>
-            <span
+      <div style={{ position: "relative", maxWidth: 1180, margin: "0 auto" }}>
+        {/* Header bar -- official briefing feel */}
+        <Row style={{ justifyContent: "space-between", marginBottom: 6 }}>
+          <Row gap={14}>
+            <div
               style={{
-                fontFamily: FONT_MONO,
-                fontSize: 56,
-                fontWeight: 600,
-                color: COLORS.cyan,
-                textShadow: `0 0 30px ${COLORS.cyanDim}`,
-                lineHeight: 1,
+                width: 40, height: 40, borderRadius: 8, background: COLORS.panel,
+                border: `1px solid ${COLORS.panelBorder}`, display: "flex",
+                alignItems: "center", justifyContent: "center",
               }}
             >
-              {peakHour ? peakHour.predicted.toLocaleString() : "—"}
-            </span>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 18, color: COLORS.textMuted }}>
-              MW
-            </span>
-          </div>
-          {peakHour && (
-            <div style={{ marginTop: 14, display: "flex", gap: 22 }}>
-              <div style={{ fontSize: 13, color: COLORS.textMuted }}>
-                Expected range:{" "}
-                <span style={{ color: COLORS.textPrimary, fontFamily: FONT_MONO }}>
-                  {(peakHour.predicted - 570).toLocaleString()}–
-                  {(peakHour.predicted + 570).toLocaleString()} MW
-                </span>
+              <Zap size={20} color={COLORS.cyan} strokeWidth={2.2} />
+            </div>
+            <div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 19, fontWeight: 700, lineHeight: 1.2 }}>
+                GridSense AI
+              </div>
+              <div style={{ fontSize: 12, color: COLORS.textMuted, letterSpacing: "0.06em" }}>
+                DAY-AHEAD LOAD FORECASTING · AEP / OHIO VALLEY REGION
               </div>
             </div>
+          </Row>
+          <Row gap={8}>
+            <div
+              style={{
+                width: 9, height: 9, borderRadius: 99,
+                background: loading ? COLORS.textFaint : COLORS.cyan,
+                animation: loading ? "none" : "pulseDot 2s infinite",
+              }}
+            />
+            <span style={{ color: COLORS.textMuted, fontSize: 13, fontFamily: FONT_MONO }}>
+              {loading ? "SYNCING" : error ? "OFFLINE" : "LIVE FEED"}
+            </span>
+          </Row>
+        </Row>
+
+        <div style={{ height: 1, background: COLORS.hairline, margin: "22px 0 24px" }} />
+
+        {/* Date picker -- large, touch-friendly */}
+        <Panel style={{ padding: "18px 24px", marginBottom: 18 }}>
+          <Row gap={16}>
+            <Row gap={8}>
+              <Calendar size={17} color={COLORS.cyan} />
+              <Label>Forecast date</Label>
+            </Row>
+            <input
+              type="date"
+              value={selectedDate}
+              min="2004-10-08"
+              max="2018-08-02"
+              onChange={(e) => setSelectedDate(e.target.value)}
+              style={{
+                background: COLORS.void,
+                border: `1px solid ${COLORS.panelBorder}`,
+                borderRadius: 6,
+                padding: "12px 16px",
+                color: COLORS.textPrimary,
+                fontFamily: FONT_MONO,
+                fontSize: 16,
+                minHeight: 44,
+                minWidth: 190,
+              }}
+            />
+            <span style={{ fontSize: 12.5, color: COLORS.textFaint }}>
+              Real historical data · Oct 2004 – Aug 2018
+            </span>
+          </Row>
+        </Panel>
+
+        {error && (
+          <Panel style={{ padding: "16px 24px", marginBottom: 18, borderColor: "rgba(245,166,35,0.4)" }}>
+            <Row gap={10}>
+              <AlertTriangle size={16} color={COLORS.amber} />
+              <span style={{ fontSize: 13.5, color: COLORS.textMuted }}>
+                Could not load predictions for {selectedDate} — {error}. Confirm
+                the FastAPI server is running at localhost:8000.
+              </span>
+            </Row>
+          </Panel>
+        )}
+
+        {/* Hero row */}
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 18, marginBottom: 18 }}>
+          <Panel glow style={{ padding: "32px 36px" }}>
+            <Label>
+              {peakHour ? `PREDICTED PEAK LOAD · ${selectedDate}, ${peakHour.hour.toUpperCase()}` : "PREDICTED PEAK LOAD"}
+            </Label>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginTop: 12 }}>
+              <span
+                style={{
+                  fontFamily: FONT_MONO, fontSize: 68, fontWeight: 700,
+                  color: COLORS.cyan, textShadow: `0 0 36px ${COLORS.cyanDim}`, lineHeight: 1,
+                }}
+              >
+                {peakHour ? peakHour.predicted.toLocaleString() : "—"}
+              </span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 20, color: COLORS.textMuted }}>MW</span>
+            </div>
+            {peakHour && (
+              <div style={{ marginTop: 16, fontSize: 13.5, color: COLORS.textMuted }}>
+                Expected range:{" "}
+                <span style={{ color: COLORS.textPrimary, fontFamily: FONT_MONO }}>
+                  {(peakHour.predicted - 570).toLocaleString()}–{(peakHour.predicted + 570).toLocaleString()} MW
+                </span>
+              </div>
+            )}
+          </Panel>
+
+          <Panel style={{ padding: "28px 28px" }}>
+            <Row gap={8}>
+              <TrendingUp size={16} color={COLORS.cyan} />
+              <Label>MODEL ACCURACY</Label>
+            </Row>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 38, fontWeight: 700, marginTop: 12 }}>
+              {improvementPct}%
+            </div>
+            <div style={{ fontSize: 12.5, color: COLORS.textMuted, marginTop: 4 }}>
+              better than naive baseline
+            </div>
+            <div style={{ marginTop: 18, fontSize: 12.5, color: COLORS.textMuted }}>
+              Avg. error:{" "}
+              <span style={{ color: COLORS.textPrimary, fontFamily: FONT_MONO }}>569.8 MW</span>
+            </div>
+          </Panel>
+        </div>
+
+        {/* Why this forecast -- grounded in the REAL lag values from the API */}
+        {peakHour && peakHour.lag_24h && (
+          <Panel style={{ padding: "22px 28px", marginBottom: 18 }}>
+            <Row gap={8} style={{ marginBottom: 14 }}>
+              <Compass size={16} color={COLORS.cyan} />
+              <Label>WHY THIS FORECAST</Label>
+            </Row>
+            <div style={{ fontSize: 14, color: COLORS.textPrimary, lineHeight: 1.6 }}>
+              This peak-hour forecast leans mainly on two real signals:{" "}
+              <b style={{ color: COLORS.cyan }}>yesterday, same hour</b> (
+              {peakHour.lag_24h.toLocaleString()} MW) and{" "}
+              <b style={{ color: COLORS.cyan }}>last week, same hour</b> (
+              {peakHour.lag_168h.toLocaleString()} MW) — together these two data
+              points drive roughly <b>74%</b> of every prediction this model makes.
+            </div>
+          </Panel>
+        )}
+
+        {/* 24h forecast curve */}
+        <Panel style={{ padding: "26px 30px 16px" }}>
+          <Row style={{ justifyContent: "space-between", marginBottom: 16 }}>
+            <Row gap={8}>
+              <Activity size={16} color={COLORS.cyan} />
+              <Label>24-HOUR LOAD FORECAST · {selectedDate}</Label>
+            </Row>
+            <Row gap={6}>
+              <span style={{ width: 10, height: 2, background: COLORS.cyan, display: "inline-block" }} />
+              <span style={{ fontSize: 12, color: COLORS.textMuted }}>Predicted</span>
+            </Row>
+          </Row>
+
+          {loading ? (
+            <div style={{ height: 240, display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.textMuted, fontSize: 13 }}>
+              Loading predictions from API...
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={hourlyForecast} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="predictedFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={COLORS.cyan} stopOpacity={0.4} />
+                    <stop offset="100%" stopColor={COLORS.cyan} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke={COLORS.hairline} vertical={false} />
+                <XAxis
+                  dataKey="hour" stroke={COLORS.textFaint}
+                  tick={{ fill: COLORS.textMuted, fontSize: 11, fontFamily: FONT_MONO }}
+                  interval={2} axisLine={{ stroke: COLORS.hairline }} tickLine={false}
+                />
+                <YAxis
+                  stroke={COLORS.textFaint}
+                  tick={{ fill: COLORS.textMuted, fontSize: 11, fontFamily: FONT_MONO }}
+                  axisLine={false} tickLine={false} width={54}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Area type="monotone" dataKey="predicted" name="Predicted" stroke={COLORS.cyan} strokeWidth={2.5} fill="url(#predictedFill)" />
+              </AreaChart>
+            </ResponsiveContainer>
           )}
         </Panel>
 
-        <Panel style={{ padding: "26px 26px" }}>
-          <div className="flex items-center gap-2">
-            <TrendingUp size={15} color={COLORS.cyan} />
-            <Label>Model accuracy vs. naive guess</Label>
-          </div>
-          <div
-            style={{
-              fontFamily: FONT_MONO,
-              fontSize: 34,
-              fontWeight: 600,
-              marginTop: 10,
-              color: COLORS.textPrimary,
-            }}
-          >
-            {improvementPct}%
-          </div>
-          <div style={{ fontSize: 12.5, color: COLORS.textMuted, marginTop: 4 }}>
-            better than "same hour last week"
-          </div>
-          <div style={{ marginTop: 16, fontSize: 12.5, color: COLORS.textMuted }}>
-            Avg. error:{" "}
-            <span style={{ color: COLORS.textPrimary, fontFamily: FONT_MONO }}>
-              569.8 MW
-            </span>
-          </div>
-        </Panel>
-      </div>
+        {/* Bottom row */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginTop: 18 }}>
+          <Panel style={{ padding: "24px 28px" }}>
+            <Label>NAIVE GUESS VS. GRIDSENSE AI (AVG. ERROR)</Label>
+            <ResponsiveContainer width="100%" height={150}>
+              <BarChart data={naiveVsModel} layout="vertical" margin={{ top: 16, right: 24, left: 8, bottom: 0 }}>
+                <XAxis type="number" hide />
+                <YAxis
+                  type="category" dataKey="name" width={110}
+                  tick={{ fill: COLORS.textMuted, fontSize: 12.5, fontFamily: FONT_SANS }}
+                  axisLine={false} tickLine={false}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="value" name="Avg error" radius={[0, 3, 3, 0]} barSize={24}>
+                  {naiveVsModel.map((entry, i) => (
+                    <Cell key={i} fill={i === 0 ? COLORS.textFaint : COLORS.cyan} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </Panel>
 
-      <Panel style={{ padding: "22px 26px 12px" }} className="mb-4">
-        <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
-          <div className="flex items-center gap-2">
-            <Activity size={15} color={COLORS.cyan} />
-            <Label>24-hour load forecast — {selectedDate}</Label>
-          </div>
-          <div className="flex items-center gap-4" style={{ fontSize: 12, color: COLORS.textMuted }}>
-            <span className="flex items-center gap-1.5">
-              <span style={{ width: 10, height: 2, background: COLORS.cyan, display: "inline-block" }} />
-              Predicted
-            </span>
-          </div>
+          <Panel style={{ padding: "24px 28px" }}>
+            <Label>WHAT DRIVES EVERY FORECAST</Label>
+            <div style={{ marginTop: 16 }}>
+              {featureImportance.map((f, i) => (
+                <div key={i} style={{ marginBottom: 11 }}>
+                  <Row style={{ justifyContent: "space-between", marginBottom: 5 }}>
+                    <span style={{ fontSize: 13, color: COLORS.textPrimary }}>{f.name}</span>
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 12.5, color: COLORS.textMuted }}>{f.value}%</span>
+                  </Row>
+                  <div style={{ height: 5, background: COLORS.hairline, borderRadius: 3 }}>
+                    <div
+                      style={{
+                        height: "100%", width: `${(f.value / 58.7) * 100}%`,
+                        background: i === 0 ? COLORS.cyan : COLORS.textFaint, borderRadius: 3,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Panel>
         </div>
 
-        {loading ? (
-          <div style={{ height: 230, display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.textMuted, fontSize: 13 }}>
-            Loading predictions from API...
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={230}>
-            <AreaChart data={hourlyForecast} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
-              <defs>
-                <linearGradient id="predictedFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={COLORS.cyan} stopOpacity={0.35} />
-                  <stop offset="100%" stopColor={COLORS.cyan} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke={COLORS.hairline} vertical={false} />
-              <XAxis
-                dataKey="hour"
-                stroke={COLORS.textFaint}
-                tick={{ fill: COLORS.textMuted, fontSize: 11, fontFamily: FONT_MONO }}
-                interval={2}
-                axisLine={{ stroke: COLORS.hairline }}
-                tickLine={false}
-              />
-              <YAxis
-                stroke={COLORS.textFaint}
-                tick={{ fill: COLORS.textMuted, fontSize: 11, fontFamily: FONT_MONO }}
-                axisLine={false}
-                tickLine={false}
-                width={52}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Area
-                type="monotone"
-                dataKey="predicted"
-                name="Predicted"
-                stroke={COLORS.cyan}
-                strokeWidth={2}
-                fill="url(#predictedFill)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        )}
-      </Panel>
-
-      <div className="grid grid-cols-2 gap-4">
-        <Panel style={{ padding: "22px 26px" }}>
-          <Label>Naive guess vs. GridSense AI (avg. error)</Label>
-          <ResponsiveContainer width="100%" height={150}>
-            <BarChart data={naiveVsModel} layout="vertical" margin={{ top: 14, right: 24, left: 8, bottom: 0 }}>
-              <XAxis type="number" hide />
-              <YAxis
-                type="category"
-                dataKey="name"
-                width={110}
-                tick={{ fill: COLORS.textMuted, fontSize: 12.5, fontFamily: FONT_SANS }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="value" name="Avg error" radius={[0, 3, 3, 0]} barSize={22}>
-                {naiveVsModel.map((entry, i) => (
-                  <Cell key={i} fill={i === 0 ? COLORS.textFaint : COLORS.cyan} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </Panel>
-
-        <Panel style={{ padding: "22px 26px" }}>
-          <div className="flex items-center gap-2">
-            <Label>What drives every forecast</Label>
-          </div>
-          <div style={{ marginTop: 14 }}>
-            {featureImportance.map((f, i) => (
-              <div key={i} style={{ marginBottom: 10 }}>
-                <div className="flex justify-between" style={{ fontSize: 12.5, marginBottom: 4 }}>
-                  <span style={{ color: COLORS.textPrimary }}>{f.name}</span>
-                  <span style={{ fontFamily: FONT_MONO, color: COLORS.textMuted }}>
-                    {f.value}%
-                  </span>
-                </div>
-                <div style={{ height: 4, background: COLORS.hairline, borderRadius: 2 }}>
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${(f.value / 58.7) * 100}%`,
-                      background: i === 0 ? COLORS.cyan : COLORS.textFaint,
-                      borderRadius: 2,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+        <Panel style={{ padding: "16px 24px", marginTop: 18 }}>
+          <Row gap={10}>
+            <AlertTriangle size={15} color={COLORS.amber} />
+            <span style={{ fontSize: 13, color: COLORS.textMuted }}>
+              This forecast does not yet account for weather. Accuracy may drop
+              on days with unusual temperature swings.
+            </span>
+          </Row>
         </Panel>
       </div>
-
-      <Panel style={{ padding: "14px 22px", marginTop: 16 }}>
-        <div className="flex items-center gap-2">
-          <AlertTriangle size={14} color={COLORS.amber} />
-          <span style={{ fontSize: 12.5, color: COLORS.textMuted }}>
-            This forecast does not yet account for weather. Accuracy may drop
-            on days with unusual temperature swings.
-          </span>
-        </div>
-      </Panel>
     </div>
   );
 }

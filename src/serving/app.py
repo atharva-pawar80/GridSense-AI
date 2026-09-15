@@ -15,14 +15,16 @@ Usage:
 import pandas as pd
 import xgboost as xgb
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
 from src.serving.feature_builder import build_features_for_timestamp
 
 app = FastAPI(title="GridSense AI — Day-Ahead Load Forecast")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # only trust our dashboard's address
+    allow_origins=["http://localhost:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -59,7 +61,7 @@ def predict(request: PredictionRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    X = pd.DataFrame([features])[FEATURE_COLS]  # enforce correct column order
+    X = pd.DataFrame([features])[FEATURE_COLS]
     prediction = _model.predict(X)[0]
 
     return PredictionResponse(
@@ -68,17 +70,14 @@ def predict(request: PredictionRequest):
     )
 
 
-@app.on_event("startup")
-def load_model_and_history():
-    global _model, _history
-    _model = xgb.XGBRegressor()
-    _model.load_model("models/gridsense_baseline.json")
-    _history = pd.read_csv("data/raw/AEP_hourly.csv", parse_dates=["Datetime"])
-
-
 @app.get("/predict/day")
 def predict_day(date: str):
-    """Returns predictions for all 24 hours of the given date, e.g. ?date=2018-06-15"""
+    """Returns predictions for all 24 hours of the given date, e.g. ?date=2018-06-15
+
+    Includes the real lag_24h and lag_168h values that drove each
+    prediction, so the dashboard can explain WHY a forecast is high or
+    low using the model's actual inputs -- not a made-up explanation.
+    """
     base = pd.Timestamp(date)
     results = []
     for hour in range(24):
@@ -87,11 +86,24 @@ def predict_day(date: str):
             features = build_features_for_timestamp(_history, target_timestamp)
         except ValueError:
             continue  # not enough history for this hour, skip it
+
         X = pd.DataFrame([features])[FEATURE_COLS]
         pred = _model.predict(X)[0]
+
         results.append({
             "hour": f"{target_timestamp.hour % 12 or 12}{'am' if target_timestamp.hour < 12 else 'pm'}",
             "timestamp": str(target_timestamp),
             "predicted": float(pred),
+            "lag_24h": features["lag_24h"],
+            "lag_168h": features["lag_168h"],
         })
+
     return {"date": date, "predictions": results}
+
+
+@app.on_event("startup")
+def load_model_and_history():
+    global _model, _history
+    _model = xgb.XGBRegressor()
+    _model.load_model("models/gridsense_baseline.json")
+    _history = pd.read_csv("data/raw/AEP_hourly.csv", parse_dates=["Datetime"])
