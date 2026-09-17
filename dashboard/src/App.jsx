@@ -36,6 +36,19 @@ const naiveVsModel = [
   { name: "GridSense AI", value: 569.8 },
 ];
 
+// Detects screen width live and reports back whether we're in "mobile" mode.
+// This is what lets the whole layout reflow automatically -- no separate
+// mobile build, no toggle button needed, it just responds to real width.
+function useIsMobile(breakpoint = 760) {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < breakpoint);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < breakpoint);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 function Panel({ children, glow, style }) {
   return (
     <div
@@ -52,9 +65,9 @@ function Panel({ children, glow, style }) {
   );
 }
 
-function Label({ children }) {
+function Label({ children, style }) {
   return (
-    <div style={{ fontFamily: FONT_SANS, fontSize: 12.5, letterSpacing: "0.03em", color: COLORS.textMuted }}>
+    <div style={{ fontFamily: FONT_SANS, fontSize: 12.5, letterSpacing: "0.03em", color: COLORS.textMuted, ...style }}>
       {children}
     </div>
   );
@@ -93,6 +106,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function App() {
+  const isMobile = useIsMobile();
   const [selectedDate, setSelectedDate] = useState("2018-06-15");
   const [hourlyForecast, setHourlyForecast] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -135,15 +149,18 @@ export default function App() {
       style={{
         background: COLORS.void,
         minHeight: "100vh",
+        width: "100%",
         fontFamily: FONT_SANS,
         color: COLORS.textPrimary,
-        padding: "36px 40px",
+        padding: isMobile ? "18px 14px" : "36px 40px",
         position: "relative",
-        overflow: "hidden",
+        overflowX: "hidden",
+        boxSizing: "border-box",
       }}
     >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+        * { box-sizing: border-box; }
         @keyframes scanline {
           0% { transform: translateY(-100%); }
           100% { transform: translateY(100vh); }
@@ -159,7 +176,6 @@ export default function App() {
         }
       `}</style>
 
-      {/* Static grid background */}
       <div
         style={{
           position: "absolute", inset: 0, pointerEvents: "none",
@@ -168,7 +184,6 @@ export default function App() {
           backgroundSize: "38px 38px",
         }}
       />
-      {/* Slow animated scan line, like a radar sweep */}
       <div
         style={{
           position: "absolute", left: 0, right: 0, height: "35vh",
@@ -178,25 +193,25 @@ export default function App() {
         }}
       />
 
-      <div style={{ position: "relative", maxWidth: 1180, margin: "0 auto" }}>
-        {/* Header bar -- official briefing feel */}
-        <Row style={{ justifyContent: "space-between", marginBottom: 6 }}>
-          <Row gap={14}>
+      <div style={{ position: "relative", maxWidth: 1180, margin: "0 auto", width: "100%" }}>
+        {/* Header bar */}
+        <Row style={{ justifyContent: "space-between", marginBottom: 6, flexWrap: "wrap", gap: 12 }}>
+          <Row gap={isMobile ? 10 : 14}>
             <div
               style={{
-                width: 40, height: 40, borderRadius: 8, background: COLORS.panel,
-                border: `1px solid ${COLORS.panelBorder}`, display: "flex",
-                alignItems: "center", justifyContent: "center",
+                width: isMobile ? 34 : 40, height: isMobile ? 34 : 40, borderRadius: 8,
+                background: COLORS.panel, border: `1px solid ${COLORS.panelBorder}`,
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
               }}
             >
-              <Zap size={20} color={COLORS.cyan} strokeWidth={2.2} />
+              <Zap size={isMobile ? 17 : 20} color={COLORS.cyan} strokeWidth={2.2} />
             </div>
             <div>
-              <div style={{ fontFamily: FONT_MONO, fontSize: 19, fontWeight: 700, lineHeight: 1.2 }}>
+              <div style={{ fontFamily: FONT_MONO, fontSize: isMobile ? 16 : 19, fontWeight: 700, lineHeight: 1.2 }}>
                 GridSense AI
               </div>
-              <div style={{ fontSize: 12, color: COLORS.textMuted, letterSpacing: "0.06em" }}>
-                DAY-AHEAD LOAD FORECASTING · AEP / OHIO VALLEY REGION
+              <div style={{ fontSize: isMobile ? 10.5 : 12, color: COLORS.textMuted, letterSpacing: "0.05em" }}>
+                {isMobile ? "AEP · OHIO VALLEY REGION" : "DAY-AHEAD LOAD FORECASTING · AEP / OHIO VALLEY REGION"}
               </div>
             </div>
           </Row>
@@ -208,19 +223,19 @@ export default function App() {
                 animation: loading ? "none" : "pulseDot 2s infinite",
               }}
             />
-            <span style={{ color: COLORS.textMuted, fontSize: 13, fontFamily: FONT_MONO }}>
+            <span style={{ color: COLORS.textMuted, fontSize: 12.5, fontFamily: FONT_MONO }}>
               {loading ? "SYNCING" : error ? "OFFLINE" : "LIVE FEED"}
             </span>
           </Row>
         </Row>
 
-        <div style={{ height: 1, background: COLORS.hairline, margin: "22px 0 24px" }} />
+        <div style={{ height: 1, background: COLORS.hairline, margin: isMobile ? "16px 0 18px" : "22px 0 24px" }} />
 
-        {/* Date picker -- large, touch-friendly */}
-        <Panel style={{ padding: "18px 24px", marginBottom: 18 }}>
-          <Row gap={16}>
+        {/* Date picker */}
+        <Panel style={{ padding: isMobile ? "16px 18px" : "18px 24px", marginBottom: isMobile ? 14 : 18 }}>
+          <Row gap={isMobile ? 10 : 16} style={{ flexWrap: "wrap" }}>
             <Row gap={8}>
-              <Calendar size={17} color={COLORS.cyan} />
+              <Calendar size={16} color={COLORS.cyan} />
               <Label>Forecast date</Label>
             </Row>
             <input
@@ -233,25 +248,28 @@ export default function App() {
                 background: COLORS.void,
                 border: `1px solid ${COLORS.panelBorder}`,
                 borderRadius: 6,
-                padding: "12px 16px",
+                padding: isMobile ? "13px 14px" : "12px 16px",
                 color: COLORS.textPrimary,
                 fontFamily: FONT_MONO,
-                fontSize: 16,
-                minHeight: 44,
-                minWidth: 190,
+                fontSize: isMobile ? 15 : 16,
+                minHeight: 46,
+                minWidth: isMobile ? "100%" : 190,
+                width: isMobile ? "100%" : "auto",
               }}
             />
-            <span style={{ fontSize: 12.5, color: COLORS.textFaint }}>
-              Real historical data · Oct 2004 – Aug 2018
-            </span>
+            {!isMobile && (
+              <span style={{ fontSize: 12.5, color: COLORS.textFaint }}>
+                Real historical data · Oct 2004 – Aug 2018
+              </span>
+            )}
           </Row>
         </Panel>
 
         {error && (
-          <Panel style={{ padding: "16px 24px", marginBottom: 18, borderColor: "rgba(245,166,35,0.4)" }}>
+          <Panel style={{ padding: "16px 20px", marginBottom: isMobile ? 14 : 18, borderColor: "rgba(245,166,35,0.4)" }}>
             <Row gap={10}>
-              <AlertTriangle size={16} color={COLORS.amber} />
-              <span style={{ fontSize: 13.5, color: COLORS.textMuted }}>
+              <AlertTriangle size={16} color={COLORS.amber} style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 13, color: COLORS.textMuted }}>
                 Could not load predictions for {selectedDate} — {error}. Confirm
                 the FastAPI server is running at localhost:8000.
               </span>
@@ -259,25 +277,32 @@ export default function App() {
           </Panel>
         )}
 
-        {/* Hero row */}
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 18, marginBottom: 18 }}>
-          <Panel glow style={{ padding: "32px 36px" }}>
+        {/* Hero row -- side by side on desktop, stacked on mobile */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr",
+            gap: isMobile ? 14 : 18,
+            marginBottom: isMobile ? 14 : 18,
+          }}
+        >
+          <Panel glow style={{ padding: isMobile ? "22px 20px" : "32px 36px" }}>
             <Label>
-              {peakHour ? `PREDICTED PEAK LOAD · ${selectedDate}, ${peakHour.hour.toUpperCase()}` : "PREDICTED PEAK LOAD"}
+              {peakHour ? `PEAK LOAD · ${selectedDate}, ${peakHour.hour.toUpperCase()}` : "PREDICTED PEAK LOAD"}
             </Label>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginTop: 12 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
               <span
                 style={{
-                  fontFamily: FONT_MONO, fontSize: 68, fontWeight: 700,
+                  fontFamily: FONT_MONO, fontSize: isMobile ? 42 : 68, fontWeight: 700,
                   color: COLORS.cyan, textShadow: `0 0 36px ${COLORS.cyanDim}`, lineHeight: 1,
                 }}
               >
                 {peakHour ? peakHour.predicted.toLocaleString() : "—"}
               </span>
-              <span style={{ fontFamily: FONT_MONO, fontSize: 20, color: COLORS.textMuted }}>MW</span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: isMobile ? 15 : 20, color: COLORS.textMuted }}>MW</span>
             </div>
             {peakHour && (
-              <div style={{ marginTop: 16, fontSize: 13.5, color: COLORS.textMuted }}>
+              <div style={{ marginTop: 14, fontSize: isMobile ? 12.5 : 13.5, color: COLORS.textMuted }}>
                 Expected range:{" "}
                 <span style={{ color: COLORS.textPrimary, fontFamily: FONT_MONO }}>
                   {(peakHour.predicted - 570).toLocaleString()}–{(peakHour.predicted + 570).toLocaleString()} MW
@@ -286,32 +311,32 @@ export default function App() {
             )}
           </Panel>
 
-          <Panel style={{ padding: "28px 28px" }}>
+          <Panel style={{ padding: isMobile ? "20px 20px" : "28px 28px" }}>
             <Row gap={8}>
-              <TrendingUp size={16} color={COLORS.cyan} />
+              <TrendingUp size={15} color={COLORS.cyan} />
               <Label>MODEL ACCURACY</Label>
             </Row>
-            <div style={{ fontFamily: FONT_MONO, fontSize: 38, fontWeight: 700, marginTop: 12 }}>
+            <div style={{ fontFamily: FONT_MONO, fontSize: isMobile ? 30 : 38, fontWeight: 700, marginTop: 10 }}>
               {improvementPct}%
             </div>
             <div style={{ fontSize: 12.5, color: COLORS.textMuted, marginTop: 4 }}>
               better than naive baseline
             </div>
-            <div style={{ marginTop: 18, fontSize: 12.5, color: COLORS.textMuted }}>
+            <div style={{ marginTop: 14, fontSize: 12.5, color: COLORS.textMuted }}>
               Avg. error:{" "}
               <span style={{ color: COLORS.textPrimary, fontFamily: FONT_MONO }}>569.8 MW</span>
             </div>
           </Panel>
         </div>
 
-        {/* Why this forecast -- grounded in the REAL lag values from the API */}
+        {/* Why this forecast */}
         {peakHour && peakHour.lag_24h && (
-          <Panel style={{ padding: "22px 28px", marginBottom: 18 }}>
-            <Row gap={8} style={{ marginBottom: 14 }}>
-              <Compass size={16} color={COLORS.cyan} />
+          <Panel style={{ padding: isMobile ? "18px 20px" : "22px 28px", marginBottom: isMobile ? 14 : 18 }}>
+            <Row gap={8} style={{ marginBottom: 12 }}>
+              <Compass size={15} color={COLORS.cyan} />
               <Label>WHY THIS FORECAST</Label>
             </Row>
-            <div style={{ fontSize: 14, color: COLORS.textPrimary, lineHeight: 1.6 }}>
+            <div style={{ fontSize: isMobile ? 13 : 14, color: COLORS.textPrimary, lineHeight: 1.6 }}>
               This peak-hour forecast leans mainly on two real signals:{" "}
               <b style={{ color: COLORS.cyan }}>yesterday, same hour</b> (
               {peakHour.lag_24h.toLocaleString()} MW) and{" "}
@@ -323,11 +348,11 @@ export default function App() {
         )}
 
         {/* 24h forecast curve */}
-        <Panel style={{ padding: "26px 30px 16px" }}>
-          <Row style={{ justifyContent: "space-between", marginBottom: 16 }}>
+        <Panel style={{ padding: isMobile ? "18px 16px 10px" : "26px 30px 16px" }}>
+          <Row style={{ justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
             <Row gap={8}>
-              <Activity size={16} color={COLORS.cyan} />
-              <Label>24-HOUR LOAD FORECAST · {selectedDate}</Label>
+              <Activity size={15} color={COLORS.cyan} />
+              <Label>24-HOUR FORECAST · {selectedDate}</Label>
             </Row>
             <Row gap={6}>
               <span style={{ width: 10, height: 2, background: COLORS.cyan, display: "inline-block" }} />
@@ -336,12 +361,12 @@ export default function App() {
           </Row>
 
           {loading ? (
-            <div style={{ height: 240, display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.textMuted, fontSize: 13 }}>
+            <div style={{ height: isMobile ? 200 : 240, display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.textMuted, fontSize: 13 }}>
               Loading predictions from API...
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <AreaChart data={hourlyForecast} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
+            <ResponsiveContainer width="100%" height={isMobile ? 200 : 240}>
+              <AreaChart data={hourlyForecast} margin={{ top: 4, right: 4, left: isMobile ? -18 : -12, bottom: 0 }}>
                 <defs>
                   <linearGradient id="predictedFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={COLORS.cyan} stopOpacity={0.4} />
@@ -351,13 +376,13 @@ export default function App() {
                 <CartesianGrid stroke={COLORS.hairline} vertical={false} />
                 <XAxis
                   dataKey="hour" stroke={COLORS.textFaint}
-                  tick={{ fill: COLORS.textMuted, fontSize: 11, fontFamily: FONT_MONO }}
-                  interval={2} axisLine={{ stroke: COLORS.hairline }} tickLine={false}
+                  tick={{ fill: COLORS.textMuted, fontSize: isMobile ? 9.5 : 11, fontFamily: FONT_MONO }}
+                  interval={isMobile ? 3 : 2} axisLine={{ stroke: COLORS.hairline }} tickLine={false}
                 />
                 <YAxis
                   stroke={COLORS.textFaint}
-                  tick={{ fill: COLORS.textMuted, fontSize: 11, fontFamily: FONT_MONO }}
-                  axisLine={false} tickLine={false} width={54}
+                  tick={{ fill: COLORS.textMuted, fontSize: isMobile ? 9.5 : 11, fontFamily: FONT_MONO }}
+                  axisLine={false} tickLine={false} width={isMobile ? 42 : 54}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Area type="monotone" dataKey="predicted" name="Predicted" stroke={COLORS.cyan} strokeWidth={2.5} fill="url(#predictedFill)" />
@@ -366,20 +391,27 @@ export default function App() {
           )}
         </Panel>
 
-        {/* Bottom row */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginTop: 18 }}>
-          <Panel style={{ padding: "24px 28px" }}>
-            <Label>NAIVE GUESS VS. GRIDSENSE AI (AVG. ERROR)</Label>
-            <ResponsiveContainer width="100%" height={150}>
-              <BarChart data={naiveVsModel} layout="vertical" margin={{ top: 16, right: 24, left: 8, bottom: 0 }}>
+        {/* Bottom row -- side by side on desktop, stacked on mobile */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+            gap: isMobile ? 14 : 18,
+            marginTop: isMobile ? 14 : 18,
+          }}
+        >
+          <Panel style={{ padding: isMobile ? "18px 20px" : "24px 28px" }}>
+            <Label>NAIVE VS. GRIDSENSE AI (AVG. ERROR)</Label>
+            <ResponsiveContainer width="100%" height={140}>
+              <BarChart data={naiveVsModel} layout="vertical" margin={{ top: 16, right: 20, left: 4, bottom: 0 }}>
                 <XAxis type="number" hide />
                 <YAxis
-                  type="category" dataKey="name" width={110}
-                  tick={{ fill: COLORS.textMuted, fontSize: 12.5, fontFamily: FONT_SANS }}
+                  type="category" dataKey="name" width={isMobile ? 90 : 110}
+                  tick={{ fill: COLORS.textMuted, fontSize: isMobile ? 11 : 12.5, fontFamily: FONT_SANS }}
                   axisLine={false} tickLine={false}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" name="Avg error" radius={[0, 3, 3, 0]} barSize={24}>
+                <Bar dataKey="value" name="Avg error" radius={[0, 3, 3, 0]} barSize={22}>
                   {naiveVsModel.map((entry, i) => (
                     <Cell key={i} fill={i === 0 ? COLORS.textFaint : COLORS.cyan} />
                   ))}
@@ -388,14 +420,14 @@ export default function App() {
             </ResponsiveContainer>
           </Panel>
 
-          <Panel style={{ padding: "24px 28px" }}>
+          <Panel style={{ padding: isMobile ? "18px 20px" : "24px 28px" }}>
             <Label>WHAT DRIVES EVERY FORECAST</Label>
-            <div style={{ marginTop: 16 }}>
+            <div style={{ marginTop: 14 }}>
               {featureImportance.map((f, i) => (
-                <div key={i} style={{ marginBottom: 11 }}>
+                <div key={i} style={{ marginBottom: 10 }}>
                   <Row style={{ justifyContent: "space-between", marginBottom: 5 }}>
-                    <span style={{ fontSize: 13, color: COLORS.textPrimary }}>{f.name}</span>
-                    <span style={{ fontFamily: FONT_MONO, fontSize: 12.5, color: COLORS.textMuted }}>{f.value}%</span>
+                    <span style={{ fontSize: isMobile ? 12 : 13, color: COLORS.textPrimary }}>{f.name}</span>
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: COLORS.textMuted }}>{f.value}%</span>
                   </Row>
                   <div style={{ height: 5, background: COLORS.hairline, borderRadius: 3 }}>
                     <div
@@ -411,10 +443,10 @@ export default function App() {
           </Panel>
         </div>
 
-        <Panel style={{ padding: "16px 24px", marginTop: 18 }}>
+        <Panel style={{ padding: isMobile ? "14px 18px" : "16px 24px", marginTop: isMobile ? 14 : 18 }}>
           <Row gap={10}>
-            <AlertTriangle size={15} color={COLORS.amber} />
-            <span style={{ fontSize: 13, color: COLORS.textMuted }}>
+            <AlertTriangle size={14} color={COLORS.amber} style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: isMobile ? 12 : 13, color: COLORS.textMuted }}>
               This forecast does not yet account for weather. Accuracy may drop
               on days with unusual temperature swings.
             </span>
