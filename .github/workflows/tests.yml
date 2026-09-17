@@ -1,0 +1,50 @@
+name: Run tests
+
+# Controls WHEN this workflow runs.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    # GitHub spins up a brand new, clean Ubuntu machine for this --
+    # nothing from your laptop carries over, which is exactly the point:
+    # it proves the project works from scratch, not just "on my machine."
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: get a copy of the repo's code onto this fresh machine
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      # Step 2: install Python itself (the fresh machine doesn't have it)
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Step 3: install our project's actual dependencies
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      # Step 4: rebuild the whole pipeline from scratch -- the real dataset
+      # and trained model are NOT committed to git (data/raw/*.csv is
+      # gitignored, by design), so CI must regenerate them itself. This
+      # also proves the pipeline is genuinely reproducible, not just
+      # "works because I happen to have files sitting on my laptop."
+      - name: Download real dataset
+        run: python src/data/download_data.py
+
+      - name: Build features
+        run: python src/features/build_features.py
+
+      - name: Train model
+        run: python src/training/train_baseline.py
+
+      # Step 5: run the exact same test command you've been running locally
+      - name: Run test suite
+        run: pytest tests/test_pipeline.py -v
