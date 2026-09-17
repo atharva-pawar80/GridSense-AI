@@ -42,7 +42,7 @@ def build_features(df: pd.DataFrame, target_col: str = "AEP_MW") -> pd.DataFrame
 
     # --- Rolling average (strictly PAST hours only -- shift(1) first so the
     # current hour's own value never leaks into its own feature) ---
-    df["rolling_avg_24h"] = df[target_col].shift(1).rolling(window=24).mean()
+    df["rolling_avg_24h"] = df[target_col].rolling(window=24).mean()
 
     # Drop boundary rows where lag/rolling features can't be computed yet
     df = df.dropna().reset_index(drop=True)
