@@ -1,4 +1,5 @@
-# GridSense
+# 
+
 
 *Next-day hourly electricity demand forecasting for a real US grid operator.*
 
