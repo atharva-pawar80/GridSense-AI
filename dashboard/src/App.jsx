@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  AreaChart, Area, LineChart, Line, ReferenceLine, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar, Cell,
 } from "recharts";
-import { Zap, TrendingUp, AlertTriangle, Activity, Calendar, Compass } from "lucide-react";
+import { Zap, TrendingUp, AlertTriangle, Activity, Calendar, Compass, HeartPulse, Radar } from "lucide-react";
 
 const COLORS = {
   void: "#080B12",
@@ -13,6 +13,8 @@ const COLORS = {
   cyan: "#22D3EE",
   cyanDim: "rgba(34, 211, 238, 0.16)",
   amber: "#F5A623",
+  red: "#F0575D",
+  green: "#3DD68C",
   violet: "#7C6CF6",
   textPrimary: "#EDF2F7",
   textMuted: "#7C8798",
@@ -36,9 +38,6 @@ const naiveVsModel = [
   { name: "GridSense AI", value: 569.8 },
 ];
 
-// Detects screen width live and reports back whether we're in "mobile" mode.
-// This is what lets the whole layout reflow automatically -- no separate
-// mobile build, no toggle button needed, it just responds to real width.
 function useIsMobile(breakpoint = 760) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < breakpoint);
   useEffect(() => {
@@ -81,6 +80,12 @@ function Row({ children, style, gap = 10 }) {
   );
 }
 
+function statusColor(status) {
+  if (status === "stable") return COLORS.green;
+  if (status === "moderate shift") return COLORS.amber;
+  return COLORS.red;
+}
+
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload || !payload.length) return null;
   return (
@@ -105,12 +110,24 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
+const WeeklyDot = (props) => {
+  const { cx, cy, payload } = props;
+  const color = payload.flagged ? COLORS.red : COLORS.cyan;
+  const r = payload.flagged ? 5 : 3;
+  return <circle cx={cx} cy={cy} r={r} fill={color} stroke={COLORS.void} strokeWidth={1} />;
+};
+
 export default function App() {
   const isMobile = useIsMobile();
   const [selectedDate, setSelectedDate] = useState("2018-06-15");
   const [hourlyForecast, setHourlyForecast] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [weeklyAccuracy, setWeeklyAccuracy] = useState([]);
+  const [baselineMae, setBaselineMae] = useState(null);
+  const [driftData, setDriftData] = useState(null);
+  const [monitoringLoading, setMonitoringLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
@@ -137,12 +154,34 @@ export default function App() {
       });
   }, [selectedDate]);
 
+  // Monitoring data only needs to load once -- it's not tied to the
+  // selected forecast date, it's about overall model health.
+  useEffect(() => {
+    Promise.all([
+      fetch("http://127.0.0.1:8000/monitoring/accuracy").then((r) => r.json()),
+      fetch("http://127.0.0.1:8000/monitoring/drift").then((r) => r.json()),
+    ])
+      .then(([accuracyData, driftResult]) => {
+        setWeeklyAccuracy(accuracyData.weeks);
+        setBaselineMae(accuracyData.baseline_mae);
+        setDriftData(driftResult);
+        setMonitoringLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch monitoring data:", err);
+        setMonitoringLoading(false);
+      });
+  }, []);
+
   const improvementPct = ((1 - naiveVsModel[1].value / naiveVsModel[0].value) * 100).toFixed(1);
 
   const peakHour =
     hourlyForecast.length > 0
       ? hourlyForecast.reduce((a, b) => (b.predicted > a.predicted ? b : a))
       : null;
+
+  const flaggedWeekCount = weeklyAccuracy.filter((w) => w.flagged).length;
+  const driftFeatureCount = driftData ? driftData.features.filter((f) => f.status !== "stable").length : 0;
 
   return (
     <div
@@ -277,7 +316,7 @@ export default function App() {
           </Panel>
         )}
 
-        {/* Hero row -- side by side on desktop, stacked on mobile */}
+        {/* Hero row */}
         <div
           style={{
             display: "grid",
@@ -391,13 +430,13 @@ export default function App() {
           )}
         </Panel>
 
-        {/* Bottom row -- side by side on desktop, stacked on mobile */}
+        {/* Bottom row */}
         <div
           style={{
             display: "grid",
             gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
             gap: isMobile ? 14 : 18,
-            marginTop: isMobile ? 14 : 18,
+            margin: isMobile ? "14px 0" : "18px 0",
           }}
         >
           <Panel style={{ padding: isMobile ? "18px 20px" : "24px 28px" }}>
@@ -442,6 +481,115 @@ export default function App() {
             </div>
           </Panel>
         </div>
+
+        {/* === MODEL HEALTH SECTION === */}
+        <Row gap={8} style={{ margin: isMobile ? "22px 0 10px" : "28px 0 12px" }}>
+          <HeartPulse size={16} color={COLORS.cyan} />
+          <span style={{ fontFamily: FONT_MONO, fontSize: isMobile ? 13 : 14, fontWeight: 600, letterSpacing: "0.04em" }}>
+            MODEL HEALTH
+          </span>
+          <div style={{ flex: 1, height: 1, background: COLORS.hairline }} />
+        </Row>
+
+        {/* Weekly accuracy trend */}
+        <Panel style={{ padding: isMobile ? "18px 16px 10px" : "26px 30px 16px", marginBottom: isMobile ? 14 : 18 }}>
+          <Row style={{ justifyContent: "space-between", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
+            <Row gap={8}>
+              <Activity size={15} color={COLORS.cyan} />
+              <Label>WEEKLY FORECAST ERROR · LAST 6 MONTHS</Label>
+            </Row>
+            {!monitoringLoading && (
+              <span style={{ fontSize: 12, color: flaggedWeekCount > 0 ? COLORS.red : COLORS.green, fontFamily: FONT_MONO }}>
+                {flaggedWeekCount > 0 ? `${flaggedWeekCount} week(s) flagged` : "all weeks stable"}
+              </span>
+            )}
+          </Row>
+          <div style={{ fontSize: 12, color: COLORS.textFaint, marginBottom: 12 }}>
+            Red dots mark weeks where error was 20%+ worse than the 6-month average
+            {baselineMae ? ` (${baselineMae.toLocaleString()} MW)` : ""}.
+          </div>
+
+          {monitoringLoading ? (
+            <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.textMuted, fontSize: 13 }}>
+              Loading accuracy history...
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={weeklyAccuracy} margin={{ top: 4, right: 8, left: isMobile ? -18 : -12, bottom: 0 }}>
+                <CartesianGrid stroke={COLORS.hairline} vertical={false} />
+                <XAxis
+                  dataKey="week_start" stroke={COLORS.textFaint}
+                  tick={{ fill: COLORS.textMuted, fontSize: isMobile ? 8.5 : 10, fontFamily: FONT_MONO }}
+                  interval={isMobile ? 4 : 2} axisLine={{ stroke: COLORS.hairline }} tickLine={false}
+                />
+                <YAxis
+                  stroke={COLORS.textFaint}
+                  tick={{ fill: COLORS.textMuted, fontSize: isMobile ? 9.5 : 11, fontFamily: FONT_MONO }}
+                  axisLine={false} tickLine={false} width={isMobile ? 42 : 54}
+                />
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const p = payload[0].payload;
+                    return (
+                      <div style={{ background: "#151B27", border: `1px solid ${COLORS.hairline}`, borderRadius: 4, padding: "8px 12px", fontFamily: FONT_MONO, fontSize: 12, color: COLORS.textPrimary }}>
+                        <div style={{ color: COLORS.textMuted, marginBottom: 4 }}>Week of {label}</div>
+                        <div style={{ color: p.flagged ? COLORS.red : COLORS.cyan }}>
+                          {p.mae.toLocaleString()} MW avg error {p.flagged ? "⚠ flagged" : ""}
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+                {baselineMae && (
+                  <ReferenceLine y={baselineMae} stroke={COLORS.textFaint} strokeDasharray="4 4" />
+                )}
+                <Line type="monotone" dataKey="mae" name="Weekly error" stroke={COLORS.cyan} strokeWidth={2} dot={<WeeklyDot />} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </Panel>
+
+        {/* Drift status */}
+        <Panel style={{ padding: isMobile ? "18px 20px" : "24px 28px" }}>
+          <Row gap={8} style={{ marginBottom: 6 }}>
+            <Radar size={15} color={COLORS.cyan} />
+            <Label>DATA DRIFT · THIS SUMMER VS. LAST SUMMER</Label>
+          </Row>
+          <div style={{ fontSize: 12, color: COLORS.textFaint, marginBottom: 16 }}>
+            {driftData
+              ? `Comparing ${driftData.recent_window} against the same calendar window one year earlier (${driftData.reference_window}), to avoid confusing normal seasonality with real drift.`
+              : "Loading..."}
+          </div>
+
+          {monitoringLoading ? (
+            <div style={{ fontSize: 13, color: COLORS.textMuted }}>Loading drift analysis...</div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 12 }}>
+              {driftData.features.map((f, i) => (
+                <div
+                  key={i}
+                  style={{
+                    padding: "14px 16px",
+                    borderRadius: 6,
+                    border: `1px solid ${statusColor(f.status)}33`,
+                    background: `${statusColor(f.status)}0D`,
+                  }}
+                >
+                  <div style={{ fontSize: 12.5, color: COLORS.textPrimary, marginBottom: 8 }}>{f.feature}</div>
+                  <Row gap={8}>
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 20, fontWeight: 700, color: statusColor(f.status) }}>
+                      {f.psi}
+                    </span>
+                    <span style={{ fontSize: 11, color: statusColor(f.status), textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                      {f.status}
+                    </span>
+                  </Row>
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
 
         <Panel style={{ padding: isMobile ? "14px 18px" : "16px 24px", marginTop: isMobile ? 14 : 18 }}>
           <Row gap={10}>
