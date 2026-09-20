@@ -132,7 +132,7 @@ export default function App() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`http://127.0.0.1:8000/predict/day?date=${selectedDate}`)
+    fetch(`${API_URL}/predict/day?date=${selectedDate}`)
       .then((res) => {
         if (!res.ok) throw new Error(`Server returned ${res.status}`);
         return res.json();
@@ -158,8 +158,8 @@ export default function App() {
   // selected forecast date, it's about overall model health.
   useEffect(() => {
     Promise.all([
-      fetch("http://127.0.0.1:8000/monitoring/accuracy").then((r) => r.json()),
-      fetch("http://127.0.0.1:8000/monitoring/drift").then((r) => r.json()),
+      fetch(`${API_URL}/monitoring/accuracy`),
+      fetch(`${API_URL}/monitoring/drift`)
     ])
       .then(([accuracyData, driftResult]) => {
         setWeeklyAccuracy(accuracyData.weeks);

@@ -19,7 +19,10 @@ app = FastAPI(title="GridSense AI — Day-Ahead Load Forecast")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "https://gridsense-ai.vercel.app",  # we'll get the real URL from Vercel in a minute -- update this once you have it
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
