@@ -4,7 +4,7 @@ import {
   ResponsiveContainer, BarChart, Bar, Cell,
 } from "recharts";
 import { Zap, TrendingUp, AlertTriangle, Activity, Calendar, Compass, HeartPulse, Radar } from "lucide-react";
-
+const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 const COLORS = {
   void: "#080B12",
   panel: "#0F141E",
