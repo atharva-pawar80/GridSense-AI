@@ -157,10 +157,16 @@ export default function App() {
   // Monitoring data only needs to load once -- it's not tied to the
   // selected forecast date, it's about overall model health.
   useEffect(() => {
-    Promise.all([
-      fetch(`${API_URL}/monitoring/accuracy`),
-      fetch(`${API_URL}/monitoring/drift`)
-    ])
+  Promise.all([
+    fetch(`${API_URL}/monitoring/accuracy`).then((r) => {
+      if (!r.ok) throw new Error(`accuracy endpoint returned ${r.status}`);
+      return r.json();
+    }),
+    fetch(`${API_URL}/monitoring/drift`).then((r) => {
+      if (!r.ok) throw new Error(`drift endpoint returned ${r.status}`);
+      return r.json();
+    }),
+  ])
       .then(([accuracyData, driftResult]) => {
         setWeeklyAccuracy(accuracyData.weeks);
         setBaselineMae(accuracyData.baseline_mae);
@@ -181,7 +187,7 @@ export default function App() {
       : null;
 
   const flaggedWeekCount = weeklyAccuracy.filter((w) => w.flagged).length;
-  const driftFeatureCount = driftData ? driftData.features.filter((f) => f.status !== "stable").length : 0;
+  const driftFeatureCount = driftData?.features?.filter((f) => f.status !== "stable").length ?? 0;
 
   return (
     <div
