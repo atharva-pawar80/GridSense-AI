@@ -566,7 +566,7 @@ export default function App() {
             <div style={{ fontSize: 13, color: COLORS.textMuted }}>Loading drift analysis...</div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 12 }}>
-              {driftData.features.map((f, i) => (
+              {(driftData?.features ?? []).map((f, i) => (
                 <div
                   key={i}
                   style={{
