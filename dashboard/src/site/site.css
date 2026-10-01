@@ -1,0 +1,203 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ *
+ *  GridSense AI — design tokens
+ *  Dark, high-tech engineering canvas: zinc-950 base + cyan signal.
+ * ------------------------------------------------------------------ */
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-display: "Inter Tight", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+
+  --color-void: #05060a;
+  --color-ink: #0a0c12;
+  --color-accent: #22d3ee;
+  --color-accent-deep: #0e7490;
+  --color-signal: #6366f1;
+
+  --animate-marquee: marquee 42s linear infinite;
+  --animate-ring: ring 2.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+@keyframes marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+@keyframes ring {
+  0%   { opacity: 0.85; transform: scale(0.55); }
+  70%  { opacity: 0;    transform: scale(1.7); }
+  100% { opacity: 0;    transform: scale(1.7); }
+}
+
+/* ------------------------------------------------------------------ *
+ *  Base
+ * ------------------------------------------------------------------ */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-void);
+    color: #e4e4e7; /* zinc-200 */
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: rgb(34 211 238 / 0.28);
+    color: #fff;
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: #07080c; }
+  ::-webkit-scrollbar-thumb {
+    background: #1e2432;
+    border: 2px solid #07080c;
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: #2c3444; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ *  Atmosphere + effect layers
+ *  grid canvas · film grain · mouse spotlight · typography treatments
+ * ------------------------------------------------------------------ */
+@layer components {
+  /* fine engineering grid, radially masked so the canvas breathes */
+  .grid-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.045) 1px, transparent 1px);
+    background-size: 68px 68px;
+    -webkit-mask-image: radial-gradient(ellipse 92% 72% at 50% 0%, #000 10%, transparent 78%);
+    mask-image: radial-gradient(ellipse 92% 72% at 50% 0%, #000 10%, transparent 78%);
+  }
+
+  /* coarser module grid sitting underneath the fine one */
+  .grid-layer-baseline {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.07) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.07) 1px, transparent 1px);
+    background-size: 272px 272px;
+    -webkit-mask-image: radial-gradient(ellipse 84% 64% at 50% 6%, #000 0%, transparent 86%);
+    mask-image: radial-gradient(ellipse 84% 64% at 50% 6%, #000 0%, transparent 86%);
+  }
+
+  /* SVG fractal-noise film grain */
+  .noise-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    pointer-events: none;
+    opacity: 0.048;
+    mix-blend-mode: overlay;
+    background-repeat: repeat;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ambient radial washes in the far background */
+  .ambient-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(900px circle at 88% 6%, rgb(99 102 241 / 0.14), transparent 62%),
+      radial-gradient(1100px circle at 2% 72%, rgb(14 116 144 / 0.13), transparent 60%),
+      radial-gradient(760px circle at 60% 100%, rgb(34 211 238 / 0.07), transparent 66%);
+  }
+
+  /* ambient radial gradient spotlight that tracks the cursor */
+  .spotlight-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    will-change: background;
+    background: radial-gradient(
+      640px circle at var(--mx, 50%) var(--my, -12%),
+      rgb(34 211 238 / 0.08),
+      transparent 68%
+    );
+  }
+
+  /* 1px gradient rule */
+  .hairline {
+    height: 1px;
+    width: 100%;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.14), transparent);
+  }
+
+  /* brushed-metal headline fill */
+  .text-metal {
+    background: linear-gradient(178deg, #ffffff 4%, #e9edf5 36%, #8d97ab 94%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* cyan → indigo gradient fill */
+  .text-cyan-grad {
+    background: linear-gradient(96deg, #67e8f9 0%, #22d3ee 40%, #818cf8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .mask-fade-x {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  }
+
+  /* swipe-underline for nav + inline links */
+  .link-sweep {
+    position: relative;
+  }
+  .link-sweep::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -4px;
+    height: 1px;
+    width: 100%;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .link-sweep:hover::after {
+    transform: scaleX(1);
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* vertical editorial label */
+  .vertical-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+  }
+}
