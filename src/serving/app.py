@@ -75,14 +75,21 @@ def predict_day(date: str):
             continue
         X = pd.DataFrame([features])[FEATURE_COLS]
         pred = _model.predict(X)[0]
+
+        # Look up ground truth actual load if available in historical records
+        actual_match = _history.loc[_history["Datetime"] == target_timestamp, "AEP_MW"]
+        actual_val = float(actual_match.iloc[0]) if not actual_match.empty else None
+
         results.append({
             "hour": f"{target_timestamp.hour % 12 or 12}{'am' if target_timestamp.hour < 12 else 'pm'}",
             "timestamp": str(target_timestamp),
             "predicted": float(pred),
+            "actual": actual_val,
             "lag_24h": features["lag_24h"],
             "lag_168h": features["lag_168h"],
         })
     return {"date": date, "predictions": results}
+
 
 
 @app.get("/monitoring/accuracy")

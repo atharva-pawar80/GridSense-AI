@@ -57,7 +57,7 @@ Most portfolio forecasting projects stop at "trained a model, got a metric." Thi
 | Modeling | XGBoost, scikit-learn |
 | Experiment tracking | MLflow |
 | Serving | FastAPI, Uvicorn, Pydantic |
-| Frontend | React (Vite), Recharts |
+| Frontend | React (Vite), Tailwind CSS v4, Framer Motion, Recharts |
 | Testing | pytest |
 | CI/CD | GitHub Actions, branch protection rulesets |
 | Monitoring | Custom PSI (Population Stability Index) drift detection, weekly rolling accuracy tracking |
@@ -97,10 +97,12 @@ pytest tests/test_pipeline.py -v
 # 4. Start the API
 python -m uvicorn src.serving.app:app --reload
 
-# 5. Start the dashboard (separate terminal)
+# 5. Start the web client (separate terminal) — two pages, one dev server
 cd dashboard
 npm install
 npm run dev
+#    http://localhost:5173/                   product site (bento overview)
+#    http://localhost:5173/dashboard.html     live forecasting console
 ```
 
 ## Monitoring & the retrain trigger
