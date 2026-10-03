@@ -75,7 +75,8 @@ GridSense-AI/
 ├── dashboard/             # React dashboard (Vite + Recharts)
 ├── tests/                   # pytest suite, run automatically in CI
 ├── .github/workflows/        # GitHub Actions
-└── models/                     # trained model artifacts
+├── models/                     # trained model artifacts
+└── Dockerfile                  # API image with model and history data
 ```
 
 ## Running it locally
@@ -104,6 +105,25 @@ npm run dev
 #    http://localhost:5173/                   product site (bento overview)
 #    http://localhost:5173/dashboard.html     live forecasting console
 ```
+
+## Run the API in Docker
+
+The Docker image bundles the trained XGBoost model and the historical AEP data
+used by the API. Docker Desktop can run it with its WSL 2 backend; the build and
+run commands can be entered in PowerShell from the project root.
+
+Make sure `models/gridsense_baseline.json` and `data/raw/AEP_hourly.csv` exist.
+If the raw data is missing, download it first using the local setup instructions
+above. Then build and start the container:
+
+```powershell
+docker build -t gridsense-ai-api .
+docker run --rm -p 8000:8000 --name gridsense-api gridsense-ai-api
+```
+
+The API is available at `http://localhost:8000`; interactive API documentation
+is at `http://localhost:8000/docs`. The image contains a snapshot of the model
+and dataset at build time, so rebuild it after replacing either artifact.
 
 ## Monitoring & the retrain trigger
 
