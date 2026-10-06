@@ -15,6 +15,7 @@ def build_features_for_timestamp(history: pd.DataFrame, target_timestamp: pd.Tim
         raise ValueError("Not enough history to build features for this timestamp")
 
     # rolling average: the 24 hours strictly BEFORE the target, never including it
+    window_start = target_timestamp - pd.Timedelta(hours=47)
     window_start = target_timestamp - pd.Timedelta(hours=24)
     window = history[(history["Datetime"] >= window_start) & (history["Datetime"] < target_timestamp)]
     if len(window) < 24:
